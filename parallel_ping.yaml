@@ -1,0 +1,43 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    ping_count: 5
+    hosts:
+      - 192.168.127.1
+      - 192.168.127.2
+      - 192.168.127.3
+      - 192.168.127.4
+      - 192.168.127.5
+      - 192.168.127.6
+      - 1.1.1.1
+      - 8.8.8.8
+
+  tasks:
+    - name: MAIN | Start async ping jobs
+      shell: "ping -nqc {{ ping_count }} {{ host_ip }}"
+      args:
+        executable: /bin/sh
+      changed_when: false
+      failed_when: false
+      register: _async_jobs_list
+      loop: "{{ hosts }}"
+      loop_control:
+        loop_var: host_ip
+      async: 60
+      poll: 0  # Fire & forget
+
+    # - debug:
+    #     var: _async_jobs_list
+
+    - name: MAIN | Wait for ping to finish
+      include_tasks: "ping_single_host.yaml"
+      loop: "{{ _async_jobs_list.results }}"
+      loop_control:
+        loop_var: ping_single_host_job
+        label: "{{ ping_single_host_job.host_ip }}"
+
+    # - debug:
+    #     var: _job

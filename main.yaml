@@ -1,0 +1,32 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    ping_count: 5
+    hosts:
+      - 192.168.127.1
+      - 192.168.127.2
+      - 192.168.127.3
+      - 192.168.127.4
+      - 192.168.127.5
+      - 192.168.127.6
+      - 1.1.1.1
+      - 8.8.8.8
+
+  tasks:
+    - name: MAIN | Get credentials from Vault
+      debug:
+        msg: "--- Login to Vault and get credentials ---"
+
+    - name: MAIN | Get list of devices from Netbox
+      debug:
+        msg: "--- Query Netbox for list of devices to check ---"
+
+    - name: MAIN | Run sequential ping jobs over hosts list
+      include_tasks: "ping_host.yaml"
+      loop: "{{ hosts }}"
+      loop_control:
+        loop_var: host_ip

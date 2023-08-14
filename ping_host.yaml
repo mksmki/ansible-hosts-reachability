@@ -1,0 +1,61 @@
+---
+- name: PING | Ping host {{ host_ip }}
+  shell: "ping -nqc {{ ping_count }} {{ host_ip }}"
+  args:
+    executable: /bin/sh
+  changed_when: false
+  failed_when: false
+  register: ping_output
+
+# - debug:
+#     var: ping_output
+
+- name: PING | Split output lines
+  ansible.builtin.set_fact:
+    ping_splitted_results:
+      statistics: "{{ ping_output.stdout_lines[3].split(',') }}"
+      timings: "{{ ping_output.stdout_lines[4].split('=') }}"
+      reachable: "{{ (ping_output.rc | int == 0) | bool }}"
+
+# - debug:
+#     var: ping_splitted_results
+
+- name: PING | Extract statistics and timings if device is reachable
+  ansible.builtin.set_fact:
+    ping_results:
+      device_ip: "{{ host_ip }}"
+      protocol: "icmp"
+      packets:
+        transmitted: "{{ ping_splitted_results.statistics[0].split(' ')[0] | trim }}"
+        received: "{{ ping_splitted_results.statistics[1].split(' ')[1] | trim }}"
+        loss: "{{ ping_splitted_results.statistics[2].split(' ')[1] | trim | replace('%', '') }}"
+        time: "{{ ping_splitted_results.statistics[3].split(' ')[2] | trim | replace('ms', '') }}"
+      rtt:
+        min: "{{ ping_splitted_results.timings[1].split('/')[0] | trim }}"
+        avg: "{{ ping_splitted_results.timings[1].split('/')[1] | trim }}"
+        max: "{{ ping_splitted_results.timings[1].split('/')[2] | trim }}"
+      reachable: true
+  when:
+    - ping_splitted_results.reachable
+
+- name: PING | Mark device as Unreachable
+  ansible.builtin.set_fact:
+    ping_results:
+      device_ip: "{{ host_ip }}"
+      protocol: "icmp"
+      packets:
+        transmitted: "{{ ping_count }}"
+        received: "0"
+        loss: "100"
+        time: "0"
+      rtt:
+        min: "0"
+        avg: "0"
+        max: "0"
+      reachable: false
+  when:
+    - not ping_splitted_results.reachable
+
+- name: PING | Output results to log
+  debug:
+    var: ping_results
