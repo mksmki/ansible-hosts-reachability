@@ -1,0 +1,44 @@
+---
+# code: language=ansible
+- name: "*TEST* Split long list"
+  hosts: localhost
+  gather_facts: false
+  become: false
+  connection: local
+
+  vars:
+    num_slice_items: 3
+    very_long_list:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+
+  tasks:
+    - name: Calculate number of slices
+      ansible.builtin.set_fact:
+        slice_count: "{{ ((very_long_list | length) / num_slice_items) | int }}"
+
+    - name: Print out results
+      ansible.builtin.debug:
+        var: slice_count
+
+    - name: "Splitting long list into slices: {{ slice_count }}"
+      ansible.builtin.set_fact:
+        splitted_list: "{{ very_long_list | slice(slice_count | int) }}"
+
+    - name: Print out results
+      ansible.builtin.debug:
+        var: splitted_list
